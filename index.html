@@ -1,0 +1,266 @@
+<style>
+:root{
+  --bg:#1B1917; --surface:#232019; --surface-2:#2C2820; --line:#3A362E;
+  --text:#EDE8DE; --text-dim:#A79E8C; --accent:#B8935A; --accent-text:#2C2013;
+  --ok:#5E7A5E; --ok-text:#0F1A0F;
+}
+*{box-sizing:border-box;}
+body{margin:0;}
+.app{background:var(--bg); color:var(--text); font-family:'Inter',-apple-system,sans-serif; padding:16px; max-width:480px; margin:0 auto;}
+h1{font-family:'Oswald',sans-serif; font-weight:500; font-size:22px; letter-spacing:0.3px; margin:0 0 4px;}
+.sub{color:var(--text-dim); font-size:13px; margin:0 0 18px;}
+.tabs{display:flex; gap:6px; margin-bottom:16px;}
+.tab{flex:1; text-align:center; padding:10px 4px; border-radius:8px; background:var(--surface); color:var(--text-dim); font-size:13px; font-family:'Oswald',sans-serif; letter-spacing:0.3px; cursor:pointer; border:1px solid var(--line);}
+.tab.active{background:var(--accent); color:var(--accent-text); border-color:var(--accent);}
+.pills{display:flex; gap:6px; margin-bottom:16px; overflow-x:auto;}
+.pill{padding:8px 16px; border-radius:20px; background:var(--surface); color:var(--text-dim); font-size:13px; font-family:'Oswald',sans-serif; white-space:nowrap; cursor:pointer; border:1px solid var(--line);}
+.pill.active{background:var(--accent); color:var(--accent-text); border-color:var(--accent);}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px;}
+.ex-row{display:flex; justify-content:space-between; align-items:center; gap:8px;}
+.ex-name{font-size:14px; font-weight:500;}
+.ex-target{font-size:12px; color:var(--text-dim); margin-top:2px;}
+.ex-last{font-size:11px; color:var(--accent); margin-top:4px;}
+.weight-input{width:64px; background:var(--surface-2); border:1px solid var(--line); color:var(--text); border-radius:6px; padding:6px; font-size:13px; text-align:center;}
+.sets{display:flex; gap:6px; margin-top:8px;}
+.set-box{width:26px; height:26px; border-radius:6px; border:1px solid var(--line); background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--text-dim); cursor:pointer;}
+.set-box.done{background:var(--ok); color:var(--ok-text); border-color:var(--ok);}
+.badge{display:inline-block; font-size:10px; padding:2px 7px; border-radius:10px; background:var(--surface-2); color:var(--accent); margin-top:6px;}
+.save-btn{width:100%; padding:13px; margin-top:6px; background:var(--accent); color:var(--accent-text); border:none; border-radius:8px; font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:0.4px; cursor:pointer;}
+.save-btn:active{opacity:0.85;}
+.meta{font-size:12px; color:var(--text-dim); margin:2px 0 14px;}
+.drill-note{font-size:12px; color:var(--text-dim); line-height:1.5; margin-top:4px;}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+
+<div class="app">
+  <h1>Training log</h1>
+  <p class="sub">Strength + muscle-up progression tracker</p>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-strength" onclick="setMainTab('strength')">Strength</div>
+    <div class="tab" id="tab-muscleup" onclick="setMainTab('muscleup')">Muscle-up</div>
+  </div>
+
+  <div id="strength-view">
+    <div class="pills" id="day-pills"></div>
+    <p class="meta" id="day-meta"></p>
+    <div id="day-exercises"></div>
+    <button class="save-btn" onclick="saveDay()">Log this session</button>
+  </div>
+
+  <div id="muscleup-view" style="display:none;">
+    <div class="pills" id="phase-pills"></div>
+    <p class="meta" id="phase-meta"></p>
+    <div id="phase-drills"></div>
+    <button class="save-btn" onclick="saveMuscleup()">Log this session</button>
+  </div>
+</div>
+
+<script>
+const DAYS = {
+  A: { label: 'Day A — squat + pull', exercises: [
+    {id:'back_squat', name:'Back squat', target:'4x5'},
+    {id:'weighted_pullups', name:'Weighted pull-ups', target:'4x4-6'},
+    {id:'bench_press', name:'Flat bench press', target:'3x6-8'},
+    {id:'mu_drill', name:'Muscle-up progression drill', target:'4x3-5', bw:true},
+    {id:'lunges', name:'Walking lunges', target:'3x10/leg'},
+    {id:'lateral_raise', name:'Cable/DB lateral raise', target:'3x12-15'},
+    {id:'leg_raise', name:'Hanging leg raises', target:'3x12', bw:true}
+  ]},
+  B: { label: 'Day B — hinge + push', exercises: [
+    {id:'deadlift', name:'Deadlift', target:'4x5'},
+    {id:'weighted_dips', name:'Weighted dips', target:'4x6-8'},
+    {id:'ohp', name:'Standing overhead press', target:'3x6-8'},
+    {id:'mu_drill_b', name:'Muscle-up progression drill', target:'4x3-5', bw:true},
+    {id:'sl_rdl', name:'Single-leg RDL', target:'3x8/leg'},
+    {id:'tricep_pressdown', name:'Rope triceps pressdown', target:'3x10-12'},
+    {id:'face_pulls', name:'Face pulls', target:'3x15'}
+  ]},
+  C: { label: 'Day C — light legs + skill', exercises: [
+    {id:'bulg_split_squat', name:'Bulgarian split squat', target:'3x8/leg'},
+    {id:'mu_drill_c', name:'Muscle-up progression drill (main focus)', target:'5x2-3', bw:true},
+    {id:'incline_db_press', name:'Incline DB press', target:'3x8-10'},
+    {id:'chest_row', name:'Chest-supported row', target:'3x10'},
+    {id:'weighted_pullups_alt', name:'Weighted pull-ups (alt grip)', target:'3x6-8'},
+    {id:'lateral_raise2', name:'DB lateral raise', target:'3x15'},
+    {id:'curl', name:'EZ-bar/cable curl', target:'3x10-12'},
+    {id:'pallof', name:'Pallof press', target:'3x10/side'}
+  ]},
+  D: { label: 'Day D — light accessory', exercises: [
+    {id:'goblet_squat', name:'Goblet squat / leg press', target:'3x10'},
+    {id:'ring_dips', name:'Ring/bar dips', target:'3x8-10'},
+    {id:'pullup_var', name:'Pull-up variation', target:'3x8-10'},
+    {id:'incline_curl', name:'Incline DB curl', target:'3x10-12'},
+    {id:'oh_tricep', name:'Overhead DB triceps extension', target:'3x10-12'},
+    {id:'core_circuit', name:'Core circuit', target:'3 rounds', bw:true}
+  ]}
+};
+
+const PHASES = {
+  1: { label: 'Phase 1 — base', note: 'Weeks 1-4. Builds the false grip tolerance, pulling strength and dip lockout everything else is built on.', drills: [
+    {id:'false_grip_hang', name:'False grip hangs', target:'4x15-20 sec'},
+    {id:'p1_weighted_pullups', name:'Weighted pull-ups', target:'programmed on strength days'},
+    {id:'p1_dips', name:'Straight bar/ring dips', target:'programmed on strength days'}
+  ]},
+  2: { label: 'Phase 2 — transition', note: 'Weeks 5-8. Isolates the roll from under the bar to on top of it.', drills: [
+    {id:'transition_drill', name:'Low ring/bar transition drill', target:'4x3-5'},
+    {id:'jump_mu', name:'Jumping/feet-assisted muscle-ups', target:'4x3-5'},
+    {id:'explosive_pullup', name:'Explosive false-grip pull-ups', target:'4x3-5'}
+  ]},
+  3: { label: 'Phase 3 — integration', note: 'Weeks 9-12. Full range with reducing assistance, then strict attempts.', drills: [
+    {id:'banded_mu', name:'Banded muscle-ups', target:'3-5x2-3, lighter band weekly'},
+    {id:'strict_attempt', name:'Strict muscle-up attempts', target:'quality attempts only'}
+  ]}
+};
+
+let state = { strength: {}, muscleup: {} };
+let currentDay = 'A';
+let currentPhase = 1;
+
+function setsCount(target){ const m = target.match(/^(\d+)x/); return m ? parseInt(m[1]) : 0; }
+
+function loadAll(){
+  try{ const v = localStorage.getItem('strength'); state.strength = v ? JSON.parse(v) : {}; }catch(e){ state.strength = {}; }
+  try{ const v = localStorage.getItem('muscleup'); state.muscleup = v ? JSON.parse(v) : {}; }catch(e){ state.muscleup = {}; }
+  renderDayPills(); renderDay(); renderPhasePills(); renderPhase();
+}
+
+function setMainTab(tab){
+  document.getElementById('tab-strength').classList.toggle('active', tab==='strength');
+  document.getElementById('tab-muscleup').classList.toggle('active', tab==='muscleup');
+  document.getElementById('strength-view').style.display = tab==='strength' ? '' : 'none';
+  document.getElementById('muscleup-view').style.display = tab==='muscleup' ? '' : 'none';
+}
+
+function renderDayPills(){
+  const el = document.getElementById('day-pills'); el.innerHTML = '';
+  Object.keys(DAYS).forEach(k=>{
+    const p = document.createElement('div');
+    p.className = 'pill' + (k===currentDay ? ' active' : '');
+    p.textContent = k;
+    p.onclick = ()=>{ currentDay = k; renderDayPills(); renderDay(); };
+    el.appendChild(p);
+  });
+}
+
+function renderDay(){
+  const day = DAYS[currentDay];
+  document.getElementById('day-meta').textContent = day.label;
+  const wrap = document.getElementById('day-exercises'); wrap.innerHTML = '';
+  const saved = (state.strength[currentDay] && state.strength[currentDay].exercises) || {};
+  const lastDate = state.strength[currentDay] && state.strength[currentDay].date;
+  day.exercises.forEach(ex=>{
+    const sc = setsCount(ex.target);
+    const prev = saved[ex.id] || {};
+    const card = document.createElement('div'); card.className = 'card';
+    const allHitLastTime = prev.setsDone && prev.setsDone.length===sc && prev.setsDone.every(Boolean);
+    card.innerHTML = `
+      <div class="ex-row">
+        <div>
+          <div class="ex-name">${ex.name}</div>
+          <div class="ex-target">${ex.target}</div>
+        </div>
+        ${ex.bw ? '' : `<input class="weight-input" type="number" inputmode="decimal" placeholder="kg" value="${prev.weight||''}" id="w_${ex.id}"/>`}
+      </div>
+      <div class="sets" id="sets_${ex.id}"></div>
+      ${lastDate ? `<div class="ex-last">last: ${lastDate}${prev.weight? ' · '+prev.weight+'kg':''}</div>` : ''}
+      ${allHitLastTime ? '<div class="badge">all sets hit — consider adding weight</div>' : ''}
+    `;
+    wrap.appendChild(card);
+    const setsWrap = card.querySelector('#sets_'+ex.id);
+    const done = prev.setsDone && prev.setsDone.length===sc ? prev.setsDone.slice() : new Array(sc).fill(false);
+    for(let i=0;i<sc;i++){
+      const b = document.createElement('div');
+      b.className = 'set-box' + (done[i] ? ' done' : '');
+      b.textContent = i+1;
+      b.dataset.idx = i;
+      b.onclick = ()=>{ done[i] = !done[i]; b.classList.toggle('done', done[i]); b.dataset.state = done[i]; };
+      b.dataset.state = done[i];
+      setsWrap.appendChild(b);
+    }
+    setsWrap.dataset.exId = ex.id;
+  });
+}
+
+function saveDay(){
+  const day = DAYS[currentDay];
+  const exercises = {};
+  day.exercises.forEach(ex=>{
+    const sc = setsCount(ex.target);
+    const setsWrap = document.getElementById('sets_'+ex.id);
+    const boxes = setsWrap ? setsWrap.querySelectorAll('.set-box') : [];
+    const setsDone = Array.from(boxes).map(b=> b.dataset.state === 'true');
+    const wInput = document.getElementById('w_'+ex.id);
+    exercises[ex.id] = { weight: wInput ? wInput.value : '', setsDone };
+  });
+  const today = new Date().toISOString().slice(0,10);
+  state.strength[currentDay] = { date: today, exercises };
+  try{
+    localStorage.setItem('strength', JSON.stringify(state.strength));
+    renderDay();
+  }catch(e){ console.error('save failed', e); }
+}
+
+function renderPhasePills(){
+  const el = document.getElementById('phase-pills'); el.innerHTML = '';
+  [1,2,3].forEach(p=>{
+    const pill = document.createElement('div');
+    pill.className = 'pill' + (p===currentPhase ? ' active' : '');
+    pill.textContent = 'Phase '+p;
+    pill.onclick = ()=>{ currentPhase = p; renderPhasePills(); renderPhase(); };
+    el.appendChild(pill);
+  });
+}
+
+function renderPhase(){
+  const phase = PHASES[currentPhase];
+  document.getElementById('phase-meta').innerHTML = `${phase.label}<div class="drill-note">${phase.note}</div>`;
+  const wrap = document.getElementById('phase-drills'); wrap.innerHTML = '';
+  const saved = (state.muscleup['phase'+currentPhase] && state.muscleup['phase'+currentPhase].drills) || {};
+  const lastDate = state.muscleup['phase'+currentPhase] && state.muscleup['phase'+currentPhase].date;
+  phase.drills.forEach(d=>{
+    const card = document.createElement('div'); card.className = 'card';
+    const checked = !!saved[d.id];
+    card.innerHTML = `
+      <div class="ex-row">
+        <div>
+          <div class="ex-name">${d.name}</div>
+          <div class="ex-target">${d.target}</div>
+        </div>
+        <div class="set-box${checked? ' done':''}" id="drill_${d.id}">${checked ? '✓' : ''}</div>
+      </div>
+      ${lastDate ? `<div class="ex-last">last logged: ${lastDate}</div>` : ''}
+    `;
+    wrap.appendChild(card);
+    const box = card.querySelector('#drill_'+d.id);
+    box.dataset.state = checked;
+    box.onclick = ()=>{
+      const now = box.dataset.state === 'true';
+      box.dataset.state = !now;
+      box.classList.toggle('done', !now);
+      box.textContent = !now ? '✓' : '';
+    };
+  });
+}
+
+function saveMuscleup(){
+  const phase = PHASES[currentPhase];
+  const drills = {};
+  phase.drills.forEach(d=>{
+    const box = document.getElementById('drill_'+d.id);
+    drills[d.id] = box ? box.dataset.state === 'true' : false;
+  });
+  const today = new Date().toISOString().slice(0,10);
+  state.muscleup['phase'+currentPhase] = { date: today, drills };
+  try{
+    localStorage.setItem('muscleup', JSON.stringify(state.muscleup));
+    renderPhase();
+  }catch(e){ console.error('save failed', e); }
+}
+
+loadAll();
+</script>
+<head> using <link rel="manifest" href="manifest.json">
+navigator.serviceWorker.register('sw.js');
+  
