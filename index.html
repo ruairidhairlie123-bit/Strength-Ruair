@@ -1,15 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Training log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
-
-<meta name="style" content="width=device-width, initial-scale=1">
-
 :root{
   --bg:#1B1917; --surface:#232019; --surface-2:#2C2820; --line:#3A362E;
   --text:#EDE8DE; --text-dim:#A79E8C; --accent:#B8935A; --accent-text:#2C2013;
   --ok:#5E7A5E; --ok-text:#0F1A0F;
 }
 *{box-sizing:border-box;}
-html, body{margin:0; padding:0; min-height:100%; background:var(--bg);}
-.app{background:var(--bg); color:var(--text); font-family:'Inter',-apple-system,sans-serif; padding:16px; max-width:480px; margin:0 auto; min-height:100vh;}
+html, body{margin:0; padding:0; min-height:100%; background:var(--bg); overscroll-behavior:none;}
+.app{background:var(--bg); color:var(--text); font-family:'Inter',-apple-system,sans-serif; padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); max-width:480px; margin:0 auto; min-height:100vh;}
 h1{font-family:'Oswald',sans-serif; font-weight:500; font-size:22px; letter-spacing:0.3px; margin:0 0 4px;}
 .sub{color:var(--text-dim); font-size:13px; margin:0 0 18px;}
 .tabs{display:flex; gap:6px; margin-bottom:16px;}
@@ -62,8 +69,8 @@ h1{font-family:'Oswald',sans-serif; font-weight:500; font-size:22px; letter-spac
 .progress-top{display:flex; justify-content:space-between; align-items:center;}
 .progress-detail{font-size:13px; color:var(--text-dim); margin-top:6px; line-height:1.5;}
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
 
 <div class="app">
   <h1>Training log</h1>
@@ -479,3 +486,5 @@ function renderProgress(){
 loadAll();
 renderTodayDate();
 </script>
+</body>
+</html>
