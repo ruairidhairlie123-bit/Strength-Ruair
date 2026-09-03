@@ -29,6 +29,35 @@ h1{font-family:'Oswald',sans-serif; font-weight:500; font-size:22px; letter-spac
 .save-btn:active{opacity:0.85;}
 .meta{font-size:12px; color:var(--text-dim); margin:2px 0 14px;}
 .drill-note{font-size:12px; color:var(--text-dim); line-height:1.5; margin-top:4px;}
+.field-label{font-size:11px; color:var(--text-dim); margin:10px 0 4px; text-transform:uppercase; letter-spacing:0.4px;}
+.field-label:first-child{margin-top:0;}
+.text-input, .textarea-input, .select-input{width:100%; background:var(--surface-2); border:1px solid var(--line); color:var(--text); border-radius:6px; padding:9px 10px; font-size:14px; font-family:'Inter',sans-serif;}
+.textarea-input{resize:vertical; min-height:56px;}
+.row-2{display:flex; gap:10px;}
+.row-2 > div{flex:1;}
+.run-card{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px;}
+.run-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+.run-title{font-size:15px; font-weight:500;}
+.run-date{font-size:11px; color:var(--text-dim); margin-top:2px;}
+.run-desc{font-size:13px; color:var(--text-dim); margin-top:6px; line-height:1.4;}
+.run-stats{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
+.run-stat{font-size:11px; background:var(--surface-2); color:var(--accent); padding:3px 9px; border-radius:10px;}
+.run-actions{display:flex; gap:8px; margin-top:10px;}
+.link-btn{font-size:12px; color:var(--text-dim); background:none; border:none; padding:0; cursor:pointer; text-decoration:underline;}
+.link-btn.danger{color:#B3452C;}
+.add-btn{width:100%; padding:12px; margin-bottom:14px; background:var(--surface); color:var(--accent); border:1px dashed var(--accent); border-radius:8px; font-family:'Oswald',sans-serif; font-size:13px; cursor:pointer;}
+.empty-note{font-size:13px; color:var(--text-dim); text-align:center; padding:20px 0;}
+.stats-row{display:flex; gap:8px; margin-bottom:16px;}
+.stat-box{flex:1; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 8px; text-align:center;}
+.stat-num{font-family:'Oswald',sans-serif; font-size:20px; color:var(--accent);}
+.stat-label{font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.3px; margin-top:2px;}
+.type-badge{font-size:10px; padding:2px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:0.3px;}
+.type-badge.strength{background:#2E2A20; color:var(--accent);}
+.type-badge.muscleup{background:#20281F; color:var(--ok);}
+.type-badge.running{background:#20242C; color:#6E8FB0;}
+.progress-card{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px;}
+.progress-top{display:flex; justify-content:space-between; align-items:center;}
+.progress-detail{font-size:13px; color:var(--text-dim); margin-top:6px; line-height:1.5;}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
@@ -40,6 +69,8 @@ h1{font-family:'Oswald',sans-serif; font-weight:500; font-size:22px; letter-spac
   <div class="tabs">
     <div class="tab active" id="tab-strength" onclick="setMainTab('strength')">Strength</div>
     <div class="tab" id="tab-muscleup" onclick="setMainTab('muscleup')">Muscle-up</div>
+    <div class="tab" id="tab-running" onclick="setMainTab('running')">Running</div>
+    <div class="tab" id="tab-progress" onclick="setMainTab('progress')">Progress</div>
   </div>
 
   <div id="strength-view">
@@ -54,6 +85,17 @@ h1{font-family:'Oswald',sans-serif; font-weight:500; font-size:22px; letter-spac
     <p class="meta" id="phase-meta"></p>
     <div id="phase-drills"></div>
     <button class="save-btn" onclick="saveMuscleup()">Log this session</button>
+  </div>
+
+  <div id="running-view" style="display:none;">
+    <button class="add-btn" id="run-add-toggle" onclick="showRunForm()">+ Log a run</button>
+    <div id="run-form-wrap" style="display:none;"></div>
+    <div id="run-list"></div>
+  </div>
+
+  <div id="progress-view" style="display:none;">
+    <div class="stats-row" id="progress-stats"></div>
+    <div id="progress-list"></div>
   </div>
 </div>
 
@@ -114,23 +156,37 @@ const PHASES = {
   ]}
 };
 
-let state = { strength: {}, muscleup: {} };
+let state = { strength: {}, muscleup: {}, running: [], history: [] };
 let currentDay = 'A';
 let currentPhase = 1;
+let editingRunId = null;
 
 function setsCount(target){ const m = target.match(/^(\d+)x/); return m ? parseInt(m[1]) : 0; }
+
+function recordHistory(key, entry){
+  const idx = state.history.findIndex(h=>h.key===key && h.date===entry.date);
+  if(idx>-1){ state.history[idx] = { key, ...entry }; } else { state.history.push({ key, ...entry }); }
+  try{ localStorage.setItem('history', JSON.stringify(state.history)); }catch(e){ console.error('save failed', e); }
+}
 
 function loadAll(){
   try{ const v = localStorage.getItem('strength'); state.strength = v ? JSON.parse(v) : {}; }catch(e){ state.strength = {}; }
   try{ const v = localStorage.getItem('muscleup'); state.muscleup = v ? JSON.parse(v) : {}; }catch(e){ state.muscleup = {}; }
-  renderDayPills(); renderDay(); renderPhasePills(); renderPhase();
+  try{ const v = localStorage.getItem('running'); state.running = v ? JSON.parse(v) : []; }catch(e){ state.running = []; }
+  try{ const v = localStorage.getItem('history'); state.history = v ? JSON.parse(v) : []; }catch(e){ state.history = []; }
+  renderDayPills(); renderDay(); renderPhasePills(); renderPhase(); renderRunList();
 }
 
 function setMainTab(tab){
   document.getElementById('tab-strength').classList.toggle('active', tab==='strength');
   document.getElementById('tab-muscleup').classList.toggle('active', tab==='muscleup');
+  document.getElementById('tab-running').classList.toggle('active', tab==='running');
+  document.getElementById('tab-progress').classList.toggle('active', tab==='progress');
   document.getElementById('strength-view').style.display = tab==='strength' ? '' : 'none';
   document.getElementById('muscleup-view').style.display = tab==='muscleup' ? '' : 'none';
+  document.getElementById('running-view').style.display = tab==='running' ? '' : 'none';
+  document.getElementById('progress-view').style.display = tab==='progress' ? '' : 'none';
+  if(tab==='progress') renderProgress();
 }
 
 function renderDayPills(){
@@ -200,6 +256,14 @@ function saveDay(){
     localStorage.setItem('strength', JSON.stringify(state.strength));
     renderDay();
   }catch(e){ console.error('save failed', e); }
+
+  const summary = day.exercises.map(ex=>{
+    const e = exercises[ex.id];
+    const hit = e.setsDone.filter(Boolean).length;
+    const total = e.setsDone.length;
+    return `${ex.name}${e.weight ? ' '+e.weight+'kg' : ''} (${hit}/${total})`;
+  }).join(', ');
+  recordHistory('strength-'+currentDay, { date: today, type: 'strength', label: 'Strength '+currentDay+' — '+day.label.split('— ')[1], detail: summary });
 }
 
 function renderPhasePills(){
@@ -257,13 +321,149 @@ function saveMuscleup(){
     localStorage.setItem('muscleup', JSON.stringify(state.muscleup));
     renderPhase();
   }catch(e){ console.error('save failed', e); }
+
+  const doneCount = Object.values(drills).filter(Boolean).length;
+  const summary = phase.drills.map(d=> `${d.name} ${drills[d.id] ? '✓' : '—'}`).join(', ');
+  recordHistory('muscleup-'+currentPhase, { date: today, type: 'muscleup', label: 'Muscle-up '+phase.label+' ('+doneCount+'/'+phase.drills.length+')', detail: summary });
+}
+
+function showRunForm(id){
+  editingRunId = id || null;
+  const existing = id ? state.running.find(r=>r.id===id) : null;
+  const wrap = document.getElementById('run-form-wrap');
+  const today = new Date().toISOString().slice(0,10);
+  wrap.innerHTML = `
+    <div class="card">
+      <div class="field-label">Date</div>
+      <input class="text-input" type="date" id="run_date" value="${existing ? existing.date : today}"/>
+      <div class="field-label">Title</div>
+      <input class="text-input" type="text" id="run_title" placeholder="e.g. Riverside tempo" value="${existing ? existing.title.replace(/"/g,'&quot;') : ''}"/>
+      <div class="field-label">Description</div>
+      <textarea class="textarea-input" id="run_desc" placeholder="Route, how it felt, splits, weather...">${existing ? existing.desc : ''}</textarea>
+      <div class="row-2">
+        <div>
+          <div class="field-label">Duration</div>
+          <input class="text-input" type="text" id="run_duration" placeholder="e.g. 40 min" value="${existing ? existing.duration : ''}"/>
+        </div>
+        <div>
+          <div class="field-label">Distance</div>
+          <input class="text-input" type="text" id="run_distance" placeholder="e.g. 8 km" value="${existing ? existing.distance : ''}"/>
+        </div>
+      </div>
+      <div class="field-label">Intensity</div>
+      <select class="select-input" id="run_intensity">
+        ${['Easy','Moderate/Tempo','Long','Hard/Race'].map(opt=>`<option value="${opt}" ${existing && existing.intensity===opt ? 'selected' : ''}>${opt}</option>`).join('')}
+      </select>
+      <div class="run-actions">
+        <button class="save-btn" style="margin-top:14px;" onclick="saveRun()">Save run</button>
+      </div>
+      <div class="run-actions">
+        <button class="link-btn" onclick="cancelRunForm()">Cancel</button>
+      </div>
+    </div>
+  `;
+  wrap.style.display = '';
+  document.getElementById('run-add-toggle').style.display = 'none';
+}
+
+function cancelRunForm(){
+  editingRunId = null;
+  document.getElementById('run-form-wrap').style.display = 'none';
+  document.getElementById('run-form-wrap').innerHTML = '';
+  document.getElementById('run-add-toggle').style.display = '';
+}
+
+function saveRun(){
+  const title = document.getElementById('run_title').value.trim() || 'Untitled run';
+  const desc = document.getElementById('run_desc').value.trim();
+  const duration = document.getElementById('run_duration').value.trim();
+  const distance = document.getElementById('run_distance').value.trim();
+  const intensity = document.getElementById('run_intensity').value;
+  const date = document.getElementById('run_date').value || new Date().toISOString().slice(0,10);
+
+  if(editingRunId){
+    const idx = state.running.findIndex(r=>r.id===editingRunId);
+    if(idx>-1){ state.running[idx] = { ...state.running[idx], title, desc, duration, distance, intensity, date }; }
+  } else {
+    state.running.push({ id: 'r'+Date.now(), title, desc, duration, distance, intensity, date });
+  }
+  try{ localStorage.setItem('running', JSON.stringify(state.running)); }catch(e){ console.error('save failed', e); }
+  cancelRunForm();
+  renderRunList();
+}
+
+function deleteRun(id){
+  state.running = state.running.filter(r=>r.id!==id);
+  try{ localStorage.setItem('running', JSON.stringify(state.running)); }catch(e){ console.error('save failed', e); }
+  renderRunList();
+}
+
+function renderRunList(){
+  const list = document.getElementById('run-list');
+  if(!list) return;
+  const sorted = [...state.running].sort((a,b)=> b.date.localeCompare(a.date));
+  if(sorted.length===0){
+    list.innerHTML = '<div class="empty-note">No runs logged yet — tap "+ Log a run" to add your first one.</div>';
+    return;
+  }
+  list.innerHTML = sorted.map(r=>`
+    <div class="run-card">
+      <div class="run-top">
+        <div>
+          <div class="run-title">${r.title}</div>
+          <div class="run-date">${r.date}</div>
+        </div>
+      </div>
+      ${r.desc ? `<div class="run-desc">${r.desc}</div>` : ''}
+      <div class="run-stats">
+        ${r.duration ? `<div class="run-stat">${r.duration}</div>` : ''}
+        ${r.distance ? `<div class="run-stat">${r.distance}</div>` : ''}
+        ${r.intensity ? `<div class="run-stat">${r.intensity}</div>` : ''}
+      </div>
+      <div class="run-actions">
+        <button class="link-btn" onclick="showRunForm('${r.id}')">Edit</button>
+        <button class="link-btn danger" onclick="deleteRun('${r.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderProgress(){
+  const strengthCount = state.history.filter(h=>h.type==='strength').length;
+  const muscleupCount = state.history.filter(h=>h.type==='muscleup').length;
+  const runCount = state.running.length;
+  const totalDistance = state.running.reduce((sum,r)=>{
+    const n = parseFloat((r.distance||'').replace(',', '.'));
+    return isNaN(n) ? sum : sum + n;
+  }, 0);
+
+  document.getElementById('progress-stats').innerHTML = `
+    <div class="stat-box"><div class="stat-num">${strengthCount}</div><div class="stat-label">Strength sessions</div></div>
+    <div class="stat-box"><div class="stat-num">${muscleupCount}</div><div class="stat-label">Muscle-up sessions</div></div>
+    <div class="stat-box"><div class="stat-num">${runCount}</div><div class="stat-label">Runs${totalDistance ? ' · ~'+totalDistance.toFixed(1) : ''}</div></div>
+  `;
+
+  const timeline = [
+    ...state.history.map(h=>({ date: h.date, type: h.type, label: h.label, detail: h.detail })),
+    ...state.running.map(r=>({ date: r.date, type: 'running', label: r.title, detail: [r.duration, r.distance, r.intensity].filter(Boolean).join(' · ') + (r.desc ? ' — '+r.desc : '') }))
+  ].sort((a,b)=> b.date.localeCompare(a.date));
+
+  const list = document.getElementById('progress-list');
+  if(timeline.length===0){
+    list.innerHTML = '<div class="empty-note">Nothing logged yet — log a strength session, muscle-up session, or run and it will show up here.</div>';
+    return;
+  }
+  list.innerHTML = timeline.map(t=>`
+    <div class="progress-card">
+      <div class="progress-top">
+        <span class="type-badge ${t.type}">${t.type === 'muscleup' ? 'Muscle-up' : t.type === 'running' ? 'Running' : 'Strength'}</span>
+        <span class="run-date">${t.date}</span>
+      </div>
+      <div class="ex-name" style="margin-top:6px;">${t.label}</div>
+      ${t.detail ? `<div class="progress-detail">${t.detail}</div>` : ''}
+    </div>
+  `).join('');
 }
 
 loadAll();
 </script>
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-
-
-  
