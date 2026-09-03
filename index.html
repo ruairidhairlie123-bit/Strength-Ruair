@@ -5,8 +5,8 @@
   --ok:#5E7A5E; --ok-text:#0F1A0F;
 }
 *{box-sizing:border-box;}
-body{margin:0;}
-.app{background:var(--bg); color:var(--text); font-family:'Inter',-apple-system,sans-serif; padding:16px; max-width:480px; margin:0 auto;}
+html, body{margin:0; padding:0; min-height:100%; background:var(--bg);}
+.app{background:var(--bg); color:var(--text); font-family:'Inter',-apple-system,sans-serif; padding:16px; max-width:480px; margin:0 auto; min-height:100vh;}
 h1{font-family:'Oswald',sans-serif; font-weight:500; font-size:22px; letter-spacing:0.3px; margin:0 0 4px;}
 .sub{color:var(--text-dim); font-size:13px; margin:0 0 18px;}
 .tabs{display:flex; gap:6px; margin-bottom:16px;}
@@ -64,7 +64,7 @@ h1{font-family:'Oswald',sans-serif; font-weight:500; font-size:22px; letter-spac
 
 <div class="app">
   <h1>Training log</h1>
-  <p class="sub">Strength + Running Tracker</p>
+  <p class="sub">Strength + muscle-up progression tracker</p>
   <p class="sub" id="today-date" style="margin-top:-14px; color:var(--accent);"></p>
 
   <div class="tabs">
