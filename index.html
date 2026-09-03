@@ -64,7 +64,8 @@ h1{font-family:'Oswald',sans-serif; font-weight:500; font-size:22px; letter-spac
 
 <div class="app">
   <h1>Training log</h1>
-  <p class="sub">Strength + muscle-up progression tracker</p>
+  <p class="sub">Strength + Running Tracker</p>
+  <p class="sub" id="today-date" style="margin-top:-14px; color:var(--accent);"></p>
 
   <div class="tabs">
     <div class="tab active" id="tab-strength" onclick="setMainTab('strength')">Strength</div>
@@ -162,6 +163,13 @@ let currentPhase = 1;
 let editingRunId = null;
 
 function setsCount(target){ const m = target.match(/^(\d+)x/); return m ? parseInt(m[1]) : 0; }
+
+function renderTodayDate(){
+  const el = document.getElementById('today-date');
+  if(!el) return;
+  const today = new Date();
+  el.textContent = today.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
 
 function recordHistory(key, entry){
   const idx = state.history.findIndex(h=>h.key===key && h.date===entry.date);
@@ -466,4 +474,5 @@ function renderProgress(){
 }
 
 loadAll();
+renderTodayDate();
 </script>
